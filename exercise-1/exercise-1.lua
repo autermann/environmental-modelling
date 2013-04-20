@@ -7,6 +7,10 @@ function ro(table)
     })
 end
 
+function tofunc(x)
+    return type(x) == "function" and x or function() return x end
+end
+
 CONSTANTS = ro({
     START_YEAR = 1950,
     RAINFALLS = ro({ 2.0e9, 1.5e9 }),
@@ -29,16 +33,15 @@ function Model(o)
     -- the energy consumption per inhabitant (in kWh)
     o.cpi = o.cpi or CONSTANTS.INITIAL_CONSUMPTION
     -- the costs of 1kWh (in m^3)
-    o.costs = o.costs or function() return CONSTANTS.COSTS end
+    o.costs = tofunc(o.costs or CONSTANTS.COSTS)
     -- the yearly increase in consumption
-    o.consumptionChange = o.consumptionChange 
-        or function() return CONSTANTS.CONSUMPTION_CHANGE end
+    o.consumptionChange = tofunc(o.consumptionChange or CONSTANTS.CONSUMPTION_CHANGE)
     -- the rainfall amount (in m^3)
-    o.rainfalls = o.rainfalls or function() return CONSTANTS.RAINFALLS end
+    o.rainfalls = tofunc(o.rainfalls or CONSTANTS.RAINFALLS)
     -- the maximum water capacity (in m^3)
-    o.capacity = o.capacity or function() return CONSTANTS.CAPACITY end
+    o.capacity = tofunc(o.capacity or CONSTANTS.CAPACITY)
     -- the yearly increase in population
-    o.populationGrowth = o.populationGrowth or function() return CONSTANTS.POPULATION_GROWTH end
+    o.populationGrowth = tofunc(o.populationGrowth or CONSTANTS.POPULATION_GROWTH)
     -- the current water level (in m^3)
     o.water = o.water or o:capacity()
 
@@ -105,14 +108,12 @@ local models = {{
     runtime = 30 
 }, { 
     -- model 2
-    model = Model{ costs = function() return 80 end }, 
+    model = Model{ costs = 80 }, 
     runtime = 35
 }, {
     -- model 3
     model = Model{
-        consumptionChange = function()
-            return 1 + .5 * (CONSTANTS.CONSUMPTION_CHANGE - 1)
-        end
+        consumptionChange = 1 + .5 * (CONSTANTS.CONSUMPTION_CHANGE - 1)
     }, 
     runtime = 55
 }, {
@@ -131,10 +132,8 @@ local models = {{
 }, {
     -- model 5
     model = Model{
-        costs = function() return 80 end,
-        consumptionChange = function()
-            return 1 + .5 * (CONSTANTS.CONSUMPTION_CHANGE - 1)
-        end,
+        costs = 80,
+        consumptionChange = 1 + .5 * (CONSTANTS.CONSUMPTION_CHANGE - 1),
         rainfalls = function(self)
             if self.year >= 1970 then
                 return {  .5 * CONSTANTS.RAINFALLS[1] , 
@@ -145,7 +144,6 @@ local models = {{
         end
     }, 
     runtime = 40
---[[
 }, {
     
     model = Model{
@@ -163,9 +161,7 @@ local models = {{
             return { CONSTANTS.RAINFALLS[1] * change, 
                      CONSTANTS.RAINFALLS[2] * change }
         end,
-        populationGrowth = function(self)
-            return 1.0001
-        end,
+        populationGrowth = 1.0001,
         capacity = function(self)
             if self.year < 1980 then
                 return CONSTANTS.CAPACITY
@@ -175,7 +171,6 @@ local models = {{
         end
     }, 
     runtime = 17
-]]--
 }}
 
 -- model runs
