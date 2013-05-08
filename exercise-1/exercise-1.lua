@@ -173,7 +173,10 @@ local models = {{
     runtime = 17
 }}
 
--- model runs
+--[[
+    Model runs. The dam is not able to provide enough 
+    energy for city when the graphs are crossing.
+]]--
 for i,m in ipairs(models) do
     m.model.name = "Model  " .. i
     m.model:run(m.runtime)
