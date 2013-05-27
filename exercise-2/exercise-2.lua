@@ -49,7 +49,6 @@ for i = 1, #worlds do
 end
 
 Timer{
-    Event{time = 11, action = function(e)  return false end},
     Event{time = 11, action = function(e)
         worlds[2].luminosity = 1.10
         worlds[3].luminosity = 0.95
