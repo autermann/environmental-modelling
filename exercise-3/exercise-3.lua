@@ -58,11 +58,12 @@ function simulate(simulations, xdim, ydim, ntype, burningIterations, pBurn)
 		world:sample().cover = BURNING
 		Timer{Event{action = function(e)
 			world:synchronize()
-			if not update(world) then
+			local burning = update(world);
+			if not burning then
 				world.finished = e:getTime()
-				return false
 			end
-		end}}:execute(150)
+			return burning
+		end}}:execute(1000)
 
 		return {
 			runtime = world.finished,
@@ -85,7 +86,7 @@ local worlds = {
 	simulate(5, 100, 100, "vonneumann", 1, 1.0),
 	simulate(5,  50,  50, "vonneumann", 1, 0.9)	
 }
-print("Run\tEmpty\tForest\tBurned\tRuntime\tBurning")
+print("Run\t\tEmpty\t\tForest\t\tBurned\t\tRuntime\t\tBurning")
 for i,runs in ipairs(worlds) do
 	local avg = { i, 0, 0, 0, 0, 0}
 	for j,run in ipairs(runs) do
@@ -96,13 +97,13 @@ for i,runs in ipairs(worlds) do
 		local burned = run.hist[BURNED] or 0
 		local l = { i .. "." .. j, empty, forest,
 					burned, runtime, burning }
-		avg[2] = avg[2] + runtime
-		avg[3] = avg[3] + empty
-		avg[4] = avg[4] + forest
-		avg[5] = avg[5] + burning
-		avg[6] = avg[6] + burned
-		print(table.concat(l,"\t"))
+		avg[2] = avg[2] + empty
+		avg[3] = avg[3] + forest
+		avg[4] = avg[4] + burned
+		avg[5] = avg[5] + runtime
+		avg[6] = avg[6] + burning
+		print(table.concat(l,"\t\t"))
 	end
-	for i = 2,6 do avg[i] = avg[i]/#runs end
-	print(table.concat(avg,"\t"))
+	for k = 2,6 do avg[k] = avg[k]/#runs end
+	print(table.concat(avg,"\t\t"))
 end
