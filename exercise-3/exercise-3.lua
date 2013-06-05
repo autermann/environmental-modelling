@@ -5,105 +5,119 @@ FOREST = 1
 BURNING = 2
 BURNED = 3
 
-function distribution(cs)
+local params = {
+	--{ xdim =  50, ydim =  50, ntype = "vonneumann", iterations = 1, pBurn = 1.0 },
+	--{ xdim =  50, ydim =  50, ntype = "moore",      iterations = 1, pBurn = 1.0 },
+	--{ xdim =  50, ydim =  50, ntype = "vonneumann", iterations = 2, pBurn = 1.0 },
+	--{ xdim = 100, ydim = 100, ntype = "vonneumann", iterations = 1, pBurn = 1.0 },
+	{ xdim =  50, ydim =  50, ntype = "vonneumann", iterations = 1, pBurn = 0.9 }
+}
+
+local levels = { 0.2, 0.4, 0.6, 0.8, 1.0 }
+
+function distribution(world)
 	local d = {}
-	forEachCell(cs, function(c)
+	forEachCell(world, function(c)
 		if d[c.cover] then 
 			d[c.cover] = d[c.cover] + 1
 		else d[c.cover] = 1 end
 	end)
-	local size = cs.xdim * cs.ydim
+	local size = world.xdim * world.ydim
 	for k,v in pairs(d) do d[k] = v/size end
 	return d
 end
 
-function simulate(simulations, xdim, ydim, ntype, burningIterations, pBurn)
-	function sim(initialCover)
-		local world = CellularSpace{ xdim = xdim, ydim = ydim }
-		world:createNeighborhood{ strategy = ntype, self = false }
-
-		forEachCell(world, function(cell)
-			cell.iteration = 0
-			if math.random() > initialCover then
-				cell.cover = EMPTY
-			else
-				cell.cover = FOREST
-			end
-		end)
-
-		update = function(cs)
-			local burning = false
-			forEachCell(cs, function(cell)
-				if cell.past.cover == FOREST then
-					if math.random() <= pBurn then
-						forEachNeighbor(cell, function(cell, neighbor)
-							if neighbor.past.cover == BURNING then
-								burning = true
-								cell.cover = BURNING
-								cell.iteration = 1
-							end
-						end)
-					end
-				elseif cell.past.cover == BURNING then
-					cell.iteration = cell.past.iteration + 1
-					if cell.iteration >= burningIterations then
-						cell.cover = BURNED
-					else
+function update(world)
+	local burning = false
+	forEachCell(world, function(cell)
+		if cell.past.cover == FOREST then
+			if math.random() <= world.pBurn then
+				forEachNeighbor(cell, function(cell, neighbor)
+					if neighbor.past.cover == BURNING then
 						burning = true
+						cell.cover = BURNING
+						cell.iteration = 1
 					end
-				end
-			end)
-			return burning
-		end
-		world:sample().cover = BURNING
-		Timer{Event{action = function(e)
-			world:synchronize()
-			local burning = update(world);
-			if not burning then
-				world.finished = e:getTime()
+				end)
 			end
-			return burning
-		end}}:execute(1000)
+		elseif cell.past.cover == BURNING then
+			cell.iteration = cell.past.iteration + 1
+			if cell.iteration >= world.iterations then 
+				cell.cover = BURNED
+			else burning = true end
+		end
+	end)
+	return burning
+end
 
-		return {
-			runtime = world.finished,
-			hist = distribution(world)
-		}
+function sim(worlds)
+	local events = {}
+	for i,world in ipairs(worlds) do
+		events[i] = Event{action = function(e)
+			world:synchronize()
+			local burning  = update(world)
+			if not burning then world.finished = e:getTime() end
+			return burning
+		end}
 	end
-	local sims = {}
-	for i = 1, simulations do
-		table.insert(sims, sim(math.random())) 
-	end
-	return sims
+	Timer(events):execute(1000)
 end
 
 
--- execution
-local worlds = {
-	simulate(5,  50,  50, "vonneumann", 1, 1.0),
-	simulate(5,  50,  50, "moore",      1, 1.0),
-	simulate(5,  50,  50, "vonneumann", 2, 1.0),
-	simulate(5, 100, 100, "vonneumann", 1, 1.0),
-	simulate(5,  50,  50, "vonneumann", 1, 0.9)	
-}
-print("Run\t\tEmpty\t\tForest\t\tBurned\t\tRuntime\t\tBurning")
-for i,runs in ipairs(worlds) do
-	local avg = { i, 0, 0, 0, 0, 0}
-	for j,run in ipairs(runs) do
-		local runtime = run.runtime or -1
-		local empty = run.hist[EMPTY] or 0
-		local forest = run.hist[FOREST] or 0
-		local burning = run.hist[BURNING] or 0
-		local burned = run.hist[BURNED] or 0
-		local l = { i .. "." .. j, empty, forest,
-					burned, runtime, burning }
-		avg[2] = avg[2] + empty
-		avg[3] = avg[3] + forest
-		avg[4] = avg[4] + burned
-		avg[5] = avg[5] + runtime
-		avg[6] = avg[6] + burning
-		print(table.concat(l,"\t\t"))
+function createWorld(name, initialCover, xdim, ydim, ntype, iterations, pBurn)
+	local world = CellularSpace{ 
+		name = name,
+		xdim = xdim, 
+		ydim = ydim,
+		iterations = iterations,
+		pBurn = pBurn
+	}
+	world:createNeighborhood{ 
+		strategy = ntype,
+		self = false
+	}
+	forEachCell(world, function(cell)
+		cell.iteration = 0
+		if math.random() > initialCover then
+			cell.cover = EMPTY
+		else 
+			cell.cover = FOREST 
+		end
+	end)
+	world:sample().cover = BURNING
+	return world
+end
+
+local worlds = {}
+
+for i, param in ipairs(params) do
+	for j, level in ipairs(levels) do
+		for k = 1,5 do
+			table.insert(worlds, createWorld(
+				i.. "." .. j .. "." .. k,  level,
+				param.xdim, param.ydim, param.ntype,
+				param.iterations, param.pBurn))
+		end
 	end
-	for k = 2,6 do avg[k] = avg[k]/#runs end
-	print(table.concat(avg,"\t\t"))
+end
+
+-- execution
+sim(worlds)
+
+local lines = {}
+for i,world in ipairs(worlds) do
+	local hist = distribution(world)
+	lines[i] = { 
+		world.name, 
+		hist[EMPTY] or 0, 
+		hist[FOREST] or 0,
+		hist[BURNED] or 0,
+		world.finished or -1,
+		hist[BURNING] or 0 
+	}
+end
+table.insert(lines, 1, { "Run", "Empty", "Forest", 
+						 "Burned", "Runtime", "Burning" })
+for _,line in ipairs(lines) do
+	print(table.concat(line, "\t"))
 end
