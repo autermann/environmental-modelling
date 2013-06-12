@@ -1,19 +1,19 @@
 math.randomseed(os.time())
 
+SIMULATIONS = 5
 EMPTY = 0
 FOREST = 1
 BURNING = 2
 BURNED = 3
 
+local levels = { 0.2, 0.4, 0.6, 0.8, 1.0 }
 local params = {
-	--{ xdim =  50, ydim =  50, ntype = "vonneumann", iterations = 1, pBurn = 1.0 },
-	--{ xdim =  50, ydim =  50, ntype = "moore",      iterations = 1, pBurn = 1.0 },
-	--{ xdim =  50, ydim =  50, ntype = "vonneumann", iterations = 2, pBurn = 1.0 },
-	--{ xdim = 100, ydim = 100, ntype = "vonneumann", iterations = 1, pBurn = 1.0 },
+	{ xdim =  50, ydim =  50, ntype = "vonneumann", iterations = 1, pBurn = 1.0 },
+	{ xdim =  50, ydim =  50, ntype = "moore",      iterations = 1, pBurn = 1.0 },
+	{ xdim =  50, ydim =  50, ntype = "vonneumann", iterations = 2, pBurn = 1.0 },
+	{ xdim = 100, ydim = 100, ntype = "vonneumann", iterations = 1, pBurn = 1.0 },
 	{ xdim =  50, ydim =  50, ntype = "vonneumann", iterations = 1, pBurn = 0.9 }
 }
-
-local levels = { 0.2, 0.4, 0.6, 0.8, 1.0 }
 
 function distribution(world)
 	local d = {}
@@ -88,13 +88,14 @@ function createWorld(name, initialCover, xdim, ydim, ntype, iterations, pBurn)
 	return world
 end
 
+-- world creation (seperated by initial forest level)
 local worlds = {}
-
-for i, param in ipairs(params) do
-	for j, level in ipairs(levels) do
-		for k = 1,5 do
-			table.insert(worlds, createWorld(
-				i.. "." .. j .. "." .. k,  level,
+for j, level in ipairs(levels) do
+	worlds[level] = {}
+	for i, param in ipairs(params) do
+		for k = 1,SIMULATIONS do
+			table.insert(worlds[level], createWorld(
+				i .. "." .. k .. " (".. level .. ")", level,
 				param.xdim, param.ydim, param.ntype,
 				param.iterations, param.pBurn))
 		end
@@ -102,19 +103,23 @@ for i, param in ipairs(params) do
 end
 
 -- execution
-sim(worlds)
+for l, w in pairs(worlds) do sim(w) end
 
+-- obtaining results
 local lines = {}
-for i,world in ipairs(worlds) do
-	local hist = distribution(world)
-	lines[i] = { 
-		world.name, 
-		hist[EMPTY] or 0, 
-		hist[FOREST] or 0,
-		hist[BURNED] or 0,
-		world.finished or -1,
-		hist[BURNING] or 0 
-	}
+for l,w in pairs(worlds) do
+	for _,world in ipairs(w) do
+		local hist = distribution(world)
+		table.insert(lines, { 
+			world.name, 
+			hist[EMPTY] or 0, 
+			hist[FOREST] or 0,
+			hist[BURNED] or 0,
+			world.finished or -1,
+			hist[BURNING] or 0 
+		})
+	end
+	
 end
 table.insert(lines, 1, { "Run", "Empty", "Forest", 
 						 "Burned", "Runtime", "Burning" })
