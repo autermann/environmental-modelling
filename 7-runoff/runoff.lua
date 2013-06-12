@@ -1,6 +1,10 @@
 
 cb = CellularSpace{
-	database = "/home/auti/Source/environmental-modelling/7-runoff/cabecaDeBoi_4_2_0.mdb",
+	dbType = "mysql",
+	host = "localhost",
+	database = "cabeca",
+	user = "root",
+	password = "",
 	theme = "cells90x90",
 	select = {"height_ as height", "soilWater"}
 }
