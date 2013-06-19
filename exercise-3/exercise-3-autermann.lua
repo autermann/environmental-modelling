@@ -52,12 +52,13 @@ end
 
 function sim(worlds)
 	local events = {}
-	for i,world in ipairs(worlds) do
+	for i, world in ipairs(worlds) do
 		events[i] = Event{action = function(e)
 			world:synchronize()
-			local burning  = update(world)
-			if not burning then world.finished = e:getTime() end
-			return burning
+			if not update(world) then
+				world.finished = e:getTime()
+				return false
+			end
 		end}
 	end
 	Timer(events):execute(1000)
