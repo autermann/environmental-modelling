@@ -34,6 +34,94 @@ function tabs(...)
 	return table.concat(vals, "\t")
 end
 
+function XML(file)
+	local xml = {}
+	xml.indent = 0
+	function xml:writeln(s)
+		self.file:write(string.rep("\t", self.indent) .. s .. "\n")
+	end
+	function xml:incIndent()
+		self.indent = self.indent + 1
+	end
+	function xml:decIndent()
+		self.indent = self.indent - 1
+	end
+	function xml:startTag(s)
+		self:writeln(s)
+		self:incIndent()
+	end
+	function xml:endTag(s)
+		self:decIndent()
+		self:writeln(s)
+	end
+	function xml:open()
+		self.file = io.open(file, "w")
+		self:writeln('<?xml version="1.0"?>')
+	end
+	function xml:close()
+		self.file:close()
+	end
+	return xml
+end
+
+function ExcelXML(file)
+	local xls = XML(file)
+	function xls:writeWorkbook(inner)
+		self:open()
+		self:startTag('<ss:Workbook xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">')
+		inner()
+		self:endTag("</ss:Workbook>")
+		self:close()
+	end
+	function xls:writeWorksheet(name, inner)
+		self:startTag('<ss:Worksheet ss:Name="' .. name .. '">')
+		self:startTag('<ss:Table>')
+		inner()
+		self:endTag('</ss:Table>')
+		self:endTag('</ss:Worksheet>')
+	end
+	function xls:writeRow(inner)
+		self:startTag('<ss:Row>')
+		inner()
+		self:endTag('</ss:Row>')
+	end
+	function xls:writeCell(inner)
+		self:startTag('<ss:Cell>')
+		inner()
+		self:endTag('</ss:Cell>')
+	end
+	function xls:writeData(type, value)
+		self:writeln('<ss:Data ss:Type="' .. type .. '">' .. value .. '</ss:Data>')
+	end
+	return xls
+end
+
+function convertToExcel(filename, files)
+	local xls = ExcelXML(filename)
+	xls:writeWorkbook(function()
+		for filename, sheetname in files do
+			xls:writeWorksheet(sheetname, function()
+				local file = io.open(filename, "r")
+				local l = 0
+				for line in file:lines() do
+					l = l + 1
+					xls:writeRow(function()
+						for column in line:gmatch("([^\t]+)") do
+							xls:writeCell(function()
+								if l == 1 then
+									xls:writeData("String", column)
+								else
+									xls:writeData("Number", column)
+								end
+							end)
+						end
+					end)
+				end
+			end)
+		end
+	end)
+end
+
 function Worlds(executions, init)
 	local worlds = {}
 	for i, f in ipairs(init) do
@@ -56,7 +144,7 @@ function Worlds(executions, init)
 				return false
 			end},
 			-- print out the histogramm
-			Event{time = 0, period = 10, action = function(e)
+			Event{time = 0, --[[period = 10,]] action = function(e)
 				self:each(function(w)
 					w:writeln(e:getTime(), w:hist())
 				end)
@@ -71,6 +159,14 @@ function Worlds(executions, init)
 		}
 		timer:execute(iterations)
 		self:each(function(w) w:close() end)
+	end
+
+	function worlds:files()
+		local files = {}
+		self:each(function(w)
+			files[w.filename] = w.filename:gsub("%.csv","")
+		end)
+		return files
 	end
 	return worlds
 end
@@ -199,5 +295,11 @@ local init = {
 	banded({ 2, 3, 4, 5, 1 })
 }
 
+-- create the worlds
+local worlds = Worlds(5, init)
+
 -- runs for around 20 minutes...
-Worlds(5, init):run(600)
+worlds:run(600)
+
+-- merge the csv files to a single excel file
+convertToExcel("all.xml", worlds:files())
