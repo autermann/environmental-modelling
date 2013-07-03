@@ -1,4 +1,19 @@
 -- platform specific
+
+function table.indexOf(t, e)
+	local idx
+	if type(t) == "table" then
+		for i = 1,#t do
+			if t[i] == e then
+				idx = i
+				break
+			end
+		end
+	end
+	return idx
+end
+
+
 function mkdir(dir) os.execute("mkdir -p " .. dir) end
 function rmdir(dir) os.execute("rm -rf " .. dir) end
 

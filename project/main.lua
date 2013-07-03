@@ -1,4 +1,5 @@
 require "worlds"
+require "utils"
 
 local pmatrix = {
 	{ 0, 0.02, 0.06, 0.05, 0.03 },
@@ -16,38 +17,30 @@ local species = {
 	"Cynosurus"
 }
 
-function random()
-	return function(world) 
-		return math.random(#world.species)
-	end
-end
-
 function banded(order)
+	local idx = {}
+	for i,gis in ipairs(order) do
+		idx[i] = table.indexOf(species, s)
+	end
 	return function(world, cell)
 		local width = world.xdim/#order
 		-- cells coordinates are zero based, arrays one based ...
 		local band = math.floor(cell.x/width) + 1
-		return order[band]
+		return idx[band]
 	end
 end
 
 math.randomseed(os.time())
 
 local init = {
-	-- random
-	random(),
-	-- Agrostis, Holcus, Lolium, Cynosurus, Poa
-	banded({ 2, 3, 1, 5, 4 }),
-	-- Agrostis, Lolium, Cynosurus, Holcus, Poa
-	banded({ 2, 1, 5, 3, 4 }),
-	-- Agrostis, Holcus, Poa, Cynosurus, Lolium
-	banded({ 2, 3, 4, 5, 1 })
+	function(world) return math.random(#world.species) end,
+	banded({ "Agrostis", "Holcus", "Lolium", "Cynosurus", "Poa" }),
+	banded({ "Agrostis", "Lolium", "Cynosurus", "Holcus", "Poa" }),
+	banded({ "Agrostis", "Holcus", "Poa", "Cynosurus", "Lolium" })
 }
 
--- create the worlds
-local worlds = Worlds(1, species, pmatrix, init)
+-- simulate (runs for around 20 minutes ...)
+-- Worlds(5, species, pmatrix, init):run(600)
 
--- runs for around 20 minutes...
-worlds:run(2)
-
--- merge the csv files to a single excel file
+-- simulate (runs for around 5 seconds ...)
+Worlds(1, species, pmatrix, init):run(20)
