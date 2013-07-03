@@ -3,6 +3,12 @@ require "excel"
 require "world"
 
 function Worlds(executions, species, pmatrix, init)
+
+	assert(#species == #pmatrix)
+	for _,v in ipairs(pmatrix) do
+		assert(#species == #v)
+	end
+
 	local worlds = {}
 	for i, f in ipairs(init) do
 		for j = 1,executions do
