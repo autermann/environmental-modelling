@@ -1,62 +1,70 @@
-
-function XML(file)
-	local xml = {}
-	xml.indent = 0
-	function xml:writeln(s)
+local XML_ = {
+	writeln = function(self, s)
 		self.file:write(string.rep("\t", self.indent) .. s .. "\n")
-	end
-	function xml:incIndent()
+	end,
+	incIndent = function(self)
 		self.indent = self.indent + 1
-	end
-	function xml:decIndent()
+	end,
+	decIndent = function(self)
 		self.indent = self.indent - 1
-	end
-	function xml:startTag(s)
+	end,
+	startTag = function(self, s)
 		self:writeln(s)
 		self:incIndent()
-	end
-	function xml:endTag(s)
+	end,
+	endTag = function(self, s)
 		self:decIndent()
 		self:writeln(s)
-	end
-	function xml:open()
-		self.file = io.open(file, "w")
+	end,
+	open = function(self)
+		self.file = io.open(self.filename, "w")
 		self:writeln('<?xml version="1.0"?>')
-	end
-	function xml:close()
+	end,
+	close = function(self)
 		self.file:close()
 	end
-	return xml
-end
+}
 
-function ExcelXML(file)
-	local xls = XML(file)
-	function xls:writeWorkbook(inner)
+local ExcelXML_ = {
+	writeWorkbook = function(self, inner)
 		self:open()
 		self:startTag('<ss:Workbook xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">')
 		inner()
 		self:endTag("</ss:Workbook>")
 		self:close()
-	end
-	function xls:writeWorksheet(name, inner)
+	end,
+	writeWorksheet = function(self, name, inner)
 		self:startTag('<ss:Worksheet ss:Name="' .. name .. '">')
 		self:startTag('<ss:Table>')
 		inner()
 		self:endTag('</ss:Table>')
 		self:endTag('</ss:Worksheet>')
-	end
-	function xls:writeRow(inner)
+	end,
+	writeRow = function(self, inner)
 		self:startTag('<ss:Row>')
 		inner()
 		self:endTag('</ss:Row>')
-	end
-	function xls:writeCell(inner)
+	end,
+	writeCell = function(self, inner)
 		self:startTag('<ss:Cell>')
 		inner()
 		self:endTag('</ss:Cell>')
-	end
-	function xls:writeData(type, value)
+	end,
+	writeData = function(self, type, value)
 		self:writeln('<ss:Data ss:Type="' .. type .. '">' .. value .. '</ss:Data>')
 	end
+}
+
+setmetatable(ExcelXML_, {__index = XML_})
+
+function XML(file)
+	local xml = {indent = 0, filename = file}
+	setmetatable(xml, {__index = XML_})
+	return xml
+end
+
+function ExcelXML(file)
+	local xls = XML(file)
+	setmetatable(xls, {__index = ExcelXML_})
 	return xls
 end

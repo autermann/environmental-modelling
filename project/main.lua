@@ -1,6 +1,13 @@
 require "worlds"
-require "utils"
+require "util"
 
+local species = {
+	"Lolium",
+	"Agrostis",
+	"Holcus",
+	"Poa",
+	"Cynosurus"
+}
 local pmatrix = {
 	{ 0, 0.02, 0.06, 0.05, 0.03 },
 	{ 0.23, 0, 0.09, 0.32, 0.37 },
@@ -9,22 +16,14 @@ local pmatrix = {
 	{ 0.03, 0.02, 0.03, 0.05, 0 }
 }
 
-local species = { 
-	"Lolium",
-	"Agrostis",
-	"Holcus",
-	"Poa",
-	"Cynosurus"
-}
-
-function banded(order)
+local function banded(order)
 	local idx = {}
-	for i,gis in ipairs(order) do
+	for i,s in ipairs(order) do
 		idx[i] = table.indexOf(species, s)
 	end
 	return function(world, cell)
 		local width = world.xdim/#order
-		-- cells coordinates are zero based, arrays one based ...
+		-- cell coordinates are zero based, arrays one based ...
 		local band = math.floor(cell.x/width) + 1
 		return idx[band]
 	end

@@ -1,4 +1,22 @@
 -- platform specific
+function mkdir(dir)
+	os.execute("mkdir -p " .. dir)
+end
+
+function rmdir(dir)
+	os.execute("rm -rf " .. dir)
+end
+
+
+function table.shuffle(t, key, value)
+	local s = {}
+	for k, v in pairs(t) do
+		table.insert(s, { r = math.random(), [key] = k, [value] = v })
+	end
+	table.sort(s, function(a, b) return a.r < b.r end)
+	for i = 1,#s do s[i].r = nil end
+	return s
+end
 
 function table.indexOf(t, e)
 	local idx
@@ -12,10 +30,6 @@ function table.indexOf(t, e)
 	end
 	return idx
 end
-
-
-function mkdir(dir) os.execute("mkdir -p " .. dir) end
-function rmdir(dir) os.execute("rm -rf " .. dir) end
 
 function fill(count, value)
 	local table = {}
