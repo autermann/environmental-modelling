@@ -83,17 +83,6 @@ local Worlds_ = {
 
 	printWorlds = function(self, time, last)
 		if self.print then
-			if time == 0 then
-				local S = #self.species
-				for i, s in pairs(self.species) do
-					io.write(s .. " (" .. symbols[i] .. ")")
-					if i == S then
-						io.write("\n")
-					else
-						io.write(" ")
-					end
-				end
-			end
 			if (type(self.print) ~= "number" or (last or time % self.print == 0)) then
 				local width = 2 * self.xdim * #self + 3 * #self - 4
 				local time = time .. " "
@@ -109,7 +98,17 @@ local Worlds_ = {
 					end
 					if y ~= self.ydim then io.write("\n") end
 				end
-				io.write("\n".. string.rep("-", width) .."\n\n")
+				io.write("\n")
+				local S = #self.species
+				for i, s in pairs(self.species) do
+					io.write(s .. " (" .. symbols[i] .. ")")
+					if i == S then
+						io.write("\n")
+					else
+						io.write(" ")
+					end
+				end
+				io.write(string.rep("-", width) .."\n\n")
 			end
 		end
 	end,

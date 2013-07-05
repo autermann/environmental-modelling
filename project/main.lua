@@ -27,7 +27,7 @@ local worlds = Worlds{
 	xdim = 30,
 	ydim = 30,
 	species = species,
-	print = 5,
+	print = true,
 	observe = false,
 	pmatrix = {
 		{ 0, 0.02, 0.06, 0.05, 0.03 },
@@ -52,7 +52,7 @@ local worlds = Worlds{
 }
 
 
-worlds:run(3)
+worlds:run(5000)
 
 
 
