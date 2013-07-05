@@ -50,7 +50,7 @@ local Worlds_ = {
 				local p = fill(#w.species, 0)
 				forEachNeighbor(cell, function(cell, neighbor, weight)
 					local this, that = cell.species, neighbor.past.species
-					p[that] = p[that] + (1/weight) * w.pmatrix[that][this]
+					p[that] = p[that] + (1/4) * w.pmatrix[that][this]
 				end)
 				p = table.shuffle(p, "species", "p")
 				for i = 1, #p do
@@ -59,6 +59,14 @@ local Worlds_ = {
 						break
 					end
 				end
+				--[[
+				for i = 1, #w.species do
+					if math.random() < p[i] then
+						cell.species = i
+						break
+					end
+				end
+				]]
 			end)
 		end)
 	end,
@@ -74,22 +82,35 @@ local Worlds_ = {
 	end,
 
 	printWorlds = function(self, time, last)
-		if self.print and (type(self.print) ~= "number" or (last or time % self.print == 0)) then
-			local I, J, K = self.ydim, #self, self.xdim
-			local width = 2 * I * J + 3 * J - 4
-			local time = time .. " "
-			io.write(time .. string.rep("-", width - string.len(time)) .."\n")
-			for i = 1, I do
-				for j = 1, J do
-					for k = 1, K do
-						io.write(symbols[self[j].cells[K * (k-1) + i].species])
-						if k ~= K then io.write(" ") end
+		if self.print then
+			if time == 0 then
+				local S = #self.species
+				for i, s in pairs(self.species) do
+					io.write(s .. " (" .. symbols[i] .. ")")
+					if i == S then
+						io.write("\n")
+					else
+						io.write(" ")
 					end
-					if j ~= J then io.write(string.rep(" ", 4)) end
 				end
-				if i ~= I then io.write("\n") end
 			end
-			io.write("\n".. string.rep("-", width) .."\n\n")
+			if (type(self.print) ~= "number" or (last or time % self.print == 0)) then
+				local width = 2 * self.xdim * #self + 3 * #self - 4
+				local time = time .. " "
+				io.write(time .. string.rep("-", width - string.len(time)) .."\n")
+				for y = 1, self.ydim do
+					for m = 1, #self do
+						for x = 1, self.xdim do
+							local cell = self[m].cells[self.ydim * (x - 1) + y]
+							io.write(symbols[cell.species])
+							if x ~= self.xdim then io.write(" ") end
+						end
+						if m ~= #self then io.write(string.rep(" ", 4)) end
+					end
+					if y ~= self.ydim then io.write("\n") end
+				end
+				io.write("\n".. string.rep("-", width) .."\n\n")
+			end
 		end
 	end,
 

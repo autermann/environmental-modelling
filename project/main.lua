@@ -16,8 +16,7 @@ local function banded(order)
 	return function(world, cell)
 		local width = world.xdim/#order
 		-- cell coordinates are zero based, arrays one based ...
-		local band = math.floor(cell.x/width) + 1
-		return idx[band]
+		return idx[math.floor(cell.x/width) + 1]
 	end
 end
 
@@ -25,10 +24,10 @@ math.randomseed(os.time())
 
 local worlds = Worlds{
 	executions = 1,
-	xdim = 20,
-	ydim = 20,
+	xdim = 30,
+	ydim = 30,
 	species = species,
-	print = 10,
+	print = 5,
 	observe = false,
 	pmatrix = {
 		{ 0, 0.02, 0.06, 0.05, 0.03 },
@@ -38,6 +37,13 @@ local worlds = Worlds{
 		{ 0.03, 0.02, 0.03, 0.05, 0 }
 	},
 	init = {
+		banded({
+			"Lolium",
+			"Agrostis",
+			"Holcus",
+			"Poa",
+			"Cynosurus"
+		}),
 		--function(world) return math.random(#world.species) end,
 		banded({ "Agrostis", "Holcus", "Lolium", "Cynosurus", "Poa" }),
 		banded({ "Agrostis", "Lolium", "Cynosurus", "Holcus", "Poa" }),
@@ -46,8 +52,7 @@ local worlds = Worlds{
 }
 
 
-
-worlds:run(100)
+worlds:run(3)
 
 
 
