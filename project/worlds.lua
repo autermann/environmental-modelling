@@ -1,68 +1,107 @@
 require "util"
 require "excel"
-require "world"
 
-local colors = {
-	"red",
-	"yellow",
-	"orange",
-	"brown",
-	"green",
-	"cyan",
-	"blue",
-	"gray",
-	"magenta"
-}
-
+local colors = { "red", "yellow", "orange", "brown", 
+		"green", "cyan", "blue", "gray", "magenta" }
+local symbols = { "#", "+", "@", "$", "/", "ß", "€", "¶", "¢"}
 local Worlds_ = {
-	getExecutions = function(self)
-		return self.executions
-	end,
-	getSpecies = function(self)
-		return self.species
-	end,
-	getProbabilities = function(self)
-		return self.pmatrix
-	end,
+
 	each = function(self, f)
 		for _,w in ipairs(self) do f(w) end
 	end,
-	init = function(self, init)
-		-- verify pmatrix
-		assert(#self:getSpecies() == #self:getProbabilities())
-		for _,v in ipairs(self:getProbabilities()) do
-			assert(#self:getSpecies() == #v)
-		end
-		for i, f in ipairs(init) do
-			for j = 1,self:getExecutions() do
-				local w = World(self:getSpecies(), self:getProbabilities(),
-					"out/model-".. i .. "-" .. j .. ".csv", f)
-				-- only observe one run per init function
-				w.observe = false--i == 1
-				self[(i - 1) * self:getExecutions() + j] = w
-			end
-		end
+
+	createLegend = function(self)
 		local colorBar = {}
 		for i,s in ipairs(self.species) do
 			colorBar[i] = { color = colors[i], value = s }
 		end
-		self.legend = Legend{
+		return Legend{
 			grouping = "uniquevalue",
 			colorBar = colorBar
 		}
 	end,
-	files = function(self)
+
+	createObservers = function(self)
+		local legend = self:createLegend()
+		self:each(function(w)
+			if w.observe then
+				w.observer = Observer{
+					subject = w,
+					attributes = { "species" },
+					legends= { legend }
+				}
+			end
+		end)
+	end,
+
+	notify = function(self, t)
+		self:each(function(w)
+			w:notify(t)
+		end)
+	end,
+
+	synchronize = function(self)
+		self:each(function(w) w:synchronize() end)
+	end,
+
+	update = function(self)
+		self:each(function(w)
+			forEachCell(w, function(cell)
+				local p = fill(#w.species, 0)
+				forEachNeighbor(cell, function(cell, neighbor, weight)
+					local this, that = cell.species, neighbor.past.species
+					p[that] = p[that] + (1/weight) * w.pmatrix[that][this]
+				end)
+				p = table.shuffle(p, "species", "p")
+				for i = 1, #p do
+					if math.random() < p[i].p then
+						cell.species = p[i].species
+						break
+					end
+				end
+			end)
+		end)
+	end,
+
+	openFiles = function(self)
+		rmdir("out")
+		mkdir("out")
+		self:each(function(w) w.file = io.open(w.filename, "w") end)
+	end,
+
+	closeFiles = function(self)
+		self:each(function(w) w.file:close() end)
+	end,
+
+	printWorlds = function(self, time, last)
+		if self.print and (type(self.print) ~= "number" or (last or time % self.print == 0)) then
+			local I, J, K = self.ydim, #self, self.xdim
+			local width = 2 * I * J + 3 * J - 4
+			local time = time .. " "
+			io.write(time .. string.rep("-", width - string.len(time)) .."\n")
+			for i = 1, I do
+				for j = 1, J do
+					for k = 1, K do
+						io.write(symbols[self[j].cells[K * (k-1) + i].species])
+						if k ~= K then io.write(" ") end
+					end
+					if j ~= J then io.write(string.rep(" ", 4)) end
+				end
+				if i ~= I then io.write("\n") end
+			end
+			io.write("\n".. string.rep("-", width) .."\n\n")
+		end
+	end,
+
+	mergeFiles = function(self)
 		local files = {}
 		self:each(function(w)
-			files[w:getFilename()] =
-				w:getFilename():gsub("out/", ""):gsub("%.csv","")
+			files[w.filename] =
+				w.filename:gsub("out/", ""):gsub("%.csv","")
 		end)
-		return pairs(files)
-	end,
-	convertToExcel = function(self, filename)
-		local xls = ExcelXML(filename)
+		local xls = ExcelXML("out/all.xml")
 		xls:writeWorkbook(function()
-			for filename, sheetname in self:files() do
+			for filename, sheetname in pairs(files) do
 				xls:writeWorksheet(sheetname, function()
 					local l, file = 0, io.open(filename, "r")
 					for line in file:lines() do
@@ -83,67 +122,82 @@ local Worlds_ = {
 			end
 		end)
 	end,
-	run = function(self, iterations)
-		rmdir("out")
-		mkdir("out")
 
-		-- open the log files
-		self:each(function(w) w:open() end)
-
-		-- create the observers
+	writeHeader = function(self)
 		self:each(function(w)
-			if w.observe then
-				w.observer = Observer{
-					subject = w,
-					type = "chart",
-					attributes = { "species" },
-					--legends= { self.legend }
-				}
-			end
+			w.file:write(tabs("Time", w.species) .. "\n")
 		end)
+	end,
 
-		self:each(function(w) w:notify(0) end)
+	writeHistogram = function(self, time)
+		self:each(function(w)
+			local hist = fill(#self.species, 0)
+			forEachCell(w, function(cell)
+				hist[cell.species] = hist[cell.species] + 1
+			end)
+			w.file:write(tabs(time, hist) .. "\n")
+		end)
+	end,
 
-		local timer = Timer{
-			-- write the file header
+	init = function(self, executions, init)
+		for i, fun in ipairs(init) do
+			for j = 1, executions do
+				local world = CellularSpace{
+					xdim = self.xdim,
+					ydim = self.ydim,
+					pmatrix = self.pmatrix,
+					species = self.species,
+					observe = self.observe and i == 1,
+					filename = "out/model-".. i .. "-" .. j .. ".csv"
+				}
+				forEachCell(world, function(cell, ...)
+					cell.species = fun(world, cell, ...)
+				end)
+				world:createNeighborhood({
+					strategy = "vonneumann",
+					self = false 
+				})
+				table.insert(self, world)
+			end
+		end
+	end,
+
+	run = function(self, iterations)
+		self:openFiles()
+		self:writeHeader()
+		self:createObservers()
+		self:notify(0)
+		Timer{
 			Event{time = 0, action = function(e)
-				self:each(function(w)
-					w:writeln("Time", w:getSpecies())
-				end)
-				return false
+				self:writeHistogram(e:getTime())
+				self:printWorlds(e:getTime(), e:getTime() == iterations)
 			end},
-			-- print out the histogramm
-			Event{time = 0, --[[period = 10,]] action = function(e)
-				self:each(function(w)
-					w:writeln(e:getTime(), w:hist())
-				end)
-			end},
-			-- update the world
 			Event{action = function(e)
-				self:each(function(w)
-					w:synchronize()
-					w:update()
-					if w.observe then w:notify(e:getTime()) end
-				end)
+				self:synchronize()
+				self:update()
+				self:notify(e:getTime())
 			end}
-		}
-		-- execution
-		timer:execute(iterations)
-		-- close the log files ...
-		self:each(function(w) w:close() end)
-		-- ... and merge them
-		self:convertToExcel("out/all.xml", self:files())
+		}:execute(iterations)
+		self:closeFiles()
+		self:mergeFiles()
 	end
 }
 
 
-function Worlds(executions, species, pmatrix, init)
+function Worlds(attr)
+	assert(#attr.species == #attr.pmatrix)
+	for _,v in ipairs(attr.pmatrix) do
+		assert(#attr.species == #v)
+	end
 	local worlds = {
-		executions = executions,
-		species = species,
-		pmatrix = pmatrix
+		xdim = attr.xdim,
+		ydim = attr.ydim,
+		species = attr.species,
+		pmatrix = attr.pmatrix,
+		print = attr.print or false,
+		observe = attr.observe or false
 	}
 	setmetatable(worlds, {__index = Worlds_})
-	worlds:init(init)
+	worlds:init(attr.executions, attr.init)
 	return worlds
 end
