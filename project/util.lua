@@ -31,7 +31,7 @@ function table.indexOf(t, e)
     return idx
 end
 
-function fill(count, value)
+function table.fill(count, value)
     local table = {}
     for i = 1,count do table[i] = value end
     return table

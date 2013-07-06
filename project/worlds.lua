@@ -34,7 +34,7 @@ local Worlds_ = {
     update = function(self)
         self:each(function(w)
             forEachCell(w, function(cell)
-                local p = fill(#w.species, 0)
+                local p = table.fill(#w.species, 0)
                 forEachNeighbor(cell, function(cell, neighbor, weight)
                     local this, that = cell.species, neighbor.past.species
                     p[that] = p[that] + (1/4) * w.pmatrix[that][this]
@@ -51,10 +51,6 @@ local Worlds_ = {
     end,
 
     openFiles = function(self)
-        rmdir("out")
-        mkdir("out")
-        mkdir("out/images")
-        mkdir("out/csv")
         self:each(function(w) w.file = io.open(w.filename, "w") end)
     end,
 
@@ -114,7 +110,13 @@ local Worlds_ = {
                             cell.y * self.imageCellSize,
                             c[cell.species])
                     end)
-                    image:png(w.imgprefix .. "-" .. time .. ".png")
+                    if self.imageType == "gif" then
+                        image:gif(w.imgprefix .. time .. ".gif")
+                    elseif self.imageType == "png" then
+                        image:png(w.imgprefix .. time .. ".png")
+                    elseif self.imageType == "jpeg" then
+                        image:jpeg(w.imgprefix .. time .. ".jpg", 80)
+                    end
                 end)
             end
         end
@@ -158,7 +160,7 @@ local Worlds_ = {
 
     writeHistogram = function(self, time)
         self:each(function(w)
-            local hist = fill(#self.species, 0)
+            local hist = table.fill(#self.species, 0)
             forEachCell(w, function(cell)
                 hist[cell.species] = hist[cell.species] + 1
             end)
@@ -167,15 +169,21 @@ local Worlds_ = {
     end,
 
     init = function(self, executions, init)
+        rmdir("out")
+        mkdir("out")
+        mkdir("out/images")
+        mkdir("out/csv")
         for i, fun in ipairs(init) do
+			mkdir("out/images/model" .. i)
             for j = 1, executions do
+				mkdir("out/images/model" .. i .. "/run" .. j)
                 local world = CellularSpace{
                     xdim = self.xdim,
                     ydim = self.ydim,
                     pmatrix = self.pmatrix,
                     species = self.species,
                     filename = "out/csv/model-".. i .. "-" .. j .. ".csv",
-                    imgprefix = "out/images/model-".. i .. "-" .. j
+                    imgprefix = "out/images/model".. i .. "/run" .. j .. "/"
                 }
                 forEachCell(world, function(cell, ...)
                     cell.species = fun(world, cell, ...)
@@ -229,6 +237,7 @@ function Worlds(attr)
         pmatrix = attr.pmatrix,
         print = attr.print or false,
         image = attr.image or false,
+        imageType = attr.imageType or "png",
         imageCellSize = attr.imageCellSize or 40
     }
     setmetatable(worlds, {__index = Worlds_})

@@ -27,8 +27,9 @@ local worlds = Worlds{
     ydim = 40,
     species = species,
     print = false,
-    image = 10,
+    image = true,
     imageCellSize = 40,
+    imageType = "gif",
     pmatrix = {
         { 0, 0.02, 0.06, 0.05, 0.03 },
         { 0.23, 0, 0.09, 0.32, 0.37 },
