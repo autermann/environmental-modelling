@@ -45,5 +45,5 @@ local worlds = Worlds{
     }
 }
 
-
+-- ca. 40 minutes
 worlds:run(600)
