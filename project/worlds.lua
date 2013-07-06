@@ -54,6 +54,7 @@ local Worlds_ = {
         rmdir("out")
         mkdir("out")
         mkdir("out/images")
+        mkdir("out/csv")
         self:each(function(w) w.file = io.open(w.filename, "w") end)
     end,
 
@@ -173,7 +174,7 @@ local Worlds_ = {
                     ydim = self.ydim,
                     pmatrix = self.pmatrix,
                     species = self.species,
-                    filename = "out/model-".. i .. "-" .. j .. ".csv",
+                    filename = "out/csv/model-".. i .. "-" .. j .. ".csv",
                     imgprefix = "out/images/model-".. i .. "-" .. j
                 }
                 forEachCell(world, function(cell, ...)
