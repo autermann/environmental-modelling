@@ -1,37 +1,24 @@
-require "util"
-require "excel"
+require("util")
+require("excel")
+require("gd")
 
-local colors = { "red", "yellow", "orange", "brown", 
-		"green", "cyan", "blue", "gray", "magenta" }
+local colors = {
+	{255,   0,   0},
+	{255, 255,   0},
+	{255, 127,   0},
+	{128,  64,  64},
+	{  0, 255,   0},
+	{  0, 255, 255},
+	{  0,   0, 255},
+	{160, 160, 160},
+	{255,   0, 255}
+}
 local symbols = { "#", "+", "@", "$", "/", "ß", "€", "¶", "¢"}
+
 local Worlds_ = {
 
 	each = function(self, f)
 		for _,w in ipairs(self) do f(w) end
-	end,
-
-	createLegend = function(self)
-		local colorBar = {}
-		for i,s in ipairs(self.species) do
-			colorBar[i] = { color = colors[i], value = s }
-		end
-		return Legend{
-			grouping = "uniquevalue",
-			colorBar = colorBar
-		}
-	end,
-
-	createObservers = function(self)
-		local legend = self:createLegend()
-		self:each(function(w)
-			if w.observe then
-				w.observer = Observer{
-					subject = w,
-					attributes = { "species" },
-					legends= { legend }
-				}
-			end
-		end)
 	end,
 
 	notify = function(self, t)
@@ -59,14 +46,6 @@ local Worlds_ = {
 						break
 					end
 				end
-				--[[
-				for i = 1, #w.species do
-					if math.random() < p[i] then
-						cell.species = i
-						break
-					end
-				end
-				]]
 			end)
 		end)
 	end,
@@ -74,6 +53,7 @@ local Worlds_ = {
 	openFiles = function(self)
 		rmdir("out")
 		mkdir("out")
+		mkdir("out/images")
 		self:each(function(w) w.file = io.open(w.filename, "w") end)
 	end,
 
@@ -109,6 +89,32 @@ local Worlds_ = {
 					end
 				end
 				io.write(string.rep("-", width) .."\n\n")
+			end
+		end
+	end,
+
+	printImages = function(self, time, last)
+		if self.image then
+			if (type(self.image) ~= "number" or (last or time % self.image == 0)) then
+				self:each(function(w)
+					local image = gd.createTrueColor(w.xdim * self.imageCellSize,
+						                             w.ydim * self.imageCellSize)
+					local c = {}
+					for i = 1, #self.species do
+						c[i] = image:colorResolve(colors[i][1],
+												  colors[i][2],
+												  colors[i][3])
+					end
+					forEachCell(w, function(cell)
+						image:filledRectangle(
+							cell.x * self.imageCellSize,
+							(cell.y + 1) * self.imageCellSize - 1,
+							(cell.x + 1) * self.imageCellSize - 1,
+							cell.y * self.imageCellSize,
+							c[cell.species])
+					end)
+					image:png(w.imgprefix .. "-" .. time .. ".png")
+				end)
 			end
 		end
 	end,
@@ -167,8 +173,8 @@ local Worlds_ = {
 					ydim = self.ydim,
 					pmatrix = self.pmatrix,
 					species = self.species,
-					observe = self.observe and i == 1,
-					filename = "out/model-".. i .. "-" .. j .. ".csv"
+					filename = "out/model-".. i .. "-" .. j .. ".csv",
+					imgprefix = "out/images/model-".. i .. "-" .. j
 				}
 				forEachCell(world, function(cell, ...)
 					cell.species = fun(world, cell, ...)
@@ -185,17 +191,15 @@ local Worlds_ = {
 	run = function(self, iterations)
 		self:openFiles()
 		self:writeHeader()
-		self:createObservers()
-		self:notify(0)
 		Timer{
 			Event{time = 0, action = function(e)
 				self:writeHistogram(e:getTime())
 				self:printWorlds(e:getTime(), e:getTime() == iterations)
+				self:printImages(e:getTime(), e:getTime() == iterations)
 			end},
 			Event{action = function(e)
 				self:synchronize()
 				self:update()
-				self:notify(e:getTime())
 			end}
 		}:execute(iterations)
 		self:closeFiles()
@@ -203,19 +207,28 @@ local Worlds_ = {
 	end
 }
 
-
 function Worlds(attr)
+	assert(type(attr.species) == "table")
+	assert(type(attr.pmatrix) == "table")
+	if type(attr.init) == "function" then attr.init = {attr.init} end
+	assert(type(attr.init) == "table")
+	if type(attr.executions) == "number" then
+		attr.executions = attr.executions or 1
+	else
+		attr.executions = 1
+	end
 	assert(#attr.species == #attr.pmatrix)
 	for _,v in ipairs(attr.pmatrix) do
 		assert(#attr.species == #v)
 	end
 	local worlds = {
-		xdim = attr.xdim,
-		ydim = attr.ydim,
+		xdim = attr.xdim or 40,
+		ydim = attr.ydim or 40,
 		species = attr.species,
 		pmatrix = attr.pmatrix,
 		print = attr.print or false,
-		observe = attr.observe or false
+		image = attr.image or false,
+		imageCellSize = attr.imageCellSize or 40
 	}
 	setmetatable(worlds, {__index = Worlds_})
 	worlds:init(attr.executions, attr.init)
