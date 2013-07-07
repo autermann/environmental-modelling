@@ -1,0 +1,151 @@
+\documentclass[12pt,a4paper,parskip]{scrartcl}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage[english]{babel}
+\usepackage{titlesec}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{libertine}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{setspace}
+\usepackage{enumitem}
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper,left=3cm,right=3cm,top=3cm,bottom=3cm]{geometry}
+\usepackage[margin=10pt,labelfont={bf},format=plain]{caption}
+\usepackage{subcaption}
+\usepackage{epstopdf}
+\usepackage[hyphens]{url}
+\PassOptionsToPackage{hyphens}{url}
+\usepackage[unicode,breaklinks,colorlinks=true,urlcolor=black,linkcolor=black]{hyperref}
+\urlstyle{same}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\pgfplotsset{compat=1.8}
+\pgfplotstableset{col sep=tab}
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{2}
+\setlength{\columnsep}{2em}
+\setlist{parsep=.5em}
+\titleformat{\paragraph}[hang]{\sffamily\bfseries}{\theparagraph}{.1em}{}
+\titleformat{\subparagraph}[hang]{\sffamily\bfseries}{\thesubparagraph}{.1em}{}
+\makeatletter\AtBeginDocument{\hypersetup{
+    pdftitle={\@title},
+    pdfauthor={Christian Autermann},
+    pdfsubject={\@subject}
+}}\makeatother
+\newcommand{\mail}[1]{\href{mailto:#1}{\nolinkurl{#1}}}
+
+\subject{\large{Environmental Modelling -- Final Project}}
+\title{\LARGE{Cellular automaton models of interspecific competition for space -- the effect of pattern on process}}
+\author{\large{Christian Autermann}\\\large{\mail{autermann@uni-muenster.de}}}
+\date{\large{\today}}
+
+
+\definecolor{lolium}{RGB}{255,0,0}
+\definecolor{agrostis}{RGB}{255,255,0}
+\definecolor{holcus}{RGB}{255,127,0}
+\definecolor{poa}{RGB}{128,64,64}
+\definecolor{cynosurus}{RGB}{0,255,0}
+
+\newsavebox{\lolium}\savebox{\lolium}{%
+    \setlength{\fboxsep}{0pt}\setlength{\fboxrule}{1pt}%
+    \fbox{\textcolor{lolium}{\rule{.5em}{.5em}}}%
+}
+\newsavebox{\agrostis}\savebox{\agrostis}{%
+    \setlength{\fboxsep}{0pt}\setlength{\fboxrule}{1pt}%
+    \fbox{\textcolor{agrostis}{\rule{.5em}{.5em}}}%
+}
+\newsavebox{\holcus}\savebox{\holcus}{%
+    \setlength{\fboxsep}{0pt}\setlength{\fboxrule}{1pt}%
+    \fbox{\textcolor{holcus}{\rule{.5em}{.5em}}}%
+}
+\newsavebox{\poa}\savebox{\poa}{%
+    \setlength{\fboxsep}{0pt}\setlength{\fboxrule}{1pt}%
+    \fbox{\textcolor{poa}{\rule{.5em}{.5em}}}%
+}
+\newsavebox{\cynosurus}\savebox{\cynosurus}{%
+    \setlength{\fboxsep}{0pt}\setlength{\fboxrule}{1pt}%
+    \fbox{\textcolor{cynosurus}{\rule{.5em}{.5em}}}%
+}
+\newcommand{\includeframe}[3]{{
+    \setlength{\fboxsep}{0pt}%
+    \setlength{\fboxrule}{1pt}%
+    \fbox{\includegraphics[width=\textwidth]{out/images/model#1/run#2/#3.png}}%
+}}
+
+\newcommand{\includeframeset}[1]{%
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering\includeframe{1}{1}{#1}
+    \end{subfigure}\hspace{3pt}%
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering\includeframe{2}{1}{#1}
+    \end{subfigure}\hspace{3pt}%
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering\includeframe{3}{1}{#1}
+    \end{subfigure}\hspace{3pt}%
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering\includeframe{4}{1}{#1}
+    \end{subfigure}}
+
+\newcommand{\legend}{\usebox{\lolium}~Lolium, \usebox{\agrostis}~Agrostis, \usebox{\holcus}~Holcus, \usebox{\poa}~Poa, \usebox{\cynosurus}~Cynosurus}
+
+
+\newcommand{\includegraph}[1]{
+    \pgfplotstableread{out/csv/model-#1-1.csv}\model
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \begin{tikzpicture}
+            \begin{axis}[width=\textwidth,
+                         xlabel={Iteration},
+                         ylabel={Frequency},
+                         xmin=0, 
+                         xmax=600, 
+                         ymin=0, 
+                         ymax=100, 
+                         minor y tick num = 1,
+                         minor x tick num = 2,
+                         grid=major,
+                         tick label style={font=\tiny},
+                         label style={font=\tiny}] 
+                \addplot[smooth,lolium,line width=1pt] table[x={Time}, y expr=\thisrow{Lolium}/16]{\model};
+                \addplot[smooth,agrostis,line width=1pt] table[x={Time}, y expr=\thisrow{Agrostis}/16]{\model};
+                \addplot[smooth,holcus,line width=1pt] table[x={Time}, y expr=\thisrow{Holcus}/16]{\model};
+                \addplot[smooth,poa,line width=1pt] table[x={Time}, y expr=\thisrow{Poa}/16]{\model};
+                \addplot[smooth,cynosurus,line width=1pt] table[x={Time}, y expr=\thisrow{Cynosurus}/16]{\model};
+            \end{axis}
+        \end{tikzpicture}
+        \caption{Model #1}
+    \end{subfigure}}
+
+\begin{document}
+\maketitle
+\onehalfspacing
+
+\begin{figure}
+    \centering
+    \includeframeset{0}
+    \includeframeset{100}
+    \includeframeset{200}
+    \includeframeset{300}
+    \includeframeset{400}
+    \includeframeset{500}
+    \includeframeset{600}
+    \caption{\legend}
+\end{figure}
+
+\pgfplotstableread{out/csv/model-1-1.csv}\modelone
+\pgfplotstableread{out/csv/model-2-1.csv}\modeltwo
+\pgfplotstableread{out/csv/model-3-1.csv}\modelthree
+\pgfplotstableread{out/csv/model-4-1.csv}\modelfour
+
+\begin{figure}
+    \centering
+    \includegraph{1}
+    \includegraph{2}
+    \includegraph{3}
+    \includegraph{4}
+    \caption{\legend}
+\end{figure}
+
+
+\end{document}
