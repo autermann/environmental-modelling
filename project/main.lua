@@ -23,7 +23,7 @@ math.randomseed(os.time())
 
 local worlds = Worlds{
     executions = 5,
-    out = "out2",
+    out = "out",
     xdim = 40,
     ydim = 40,
     species = species,
