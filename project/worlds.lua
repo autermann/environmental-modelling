@@ -1,125 +1,39 @@
 require("util")
 require("excel")
 require("gd")
+require("world")
 
-local colors = {
-    {255,   0,   0},
-    {255, 255,   0},
-    {255, 127,   0},
-    {128,  64,  64},
-    {  0, 255,   0},
-    {  0, 255, 255},
-    {  0,   0, 255},
-    {160, 160, 160},
-    {255,   0, 255}
-}
-local symbols = { "#", "+", "@", "$", "/", "ß", "€", "¶", "¢"}
+
+local SYMBOLS = { "#", "+", "@", "$", "/", "ß", "€", "¶", "¢"}
 
 local Worlds_ = {
 
-    each = function(self, f)
-        for _,w in ipairs(self) do f(w) end
+    each = function(self, fun)
+        for _,w in ipairs(self) do fun(w) end
     end,
 
-    notify = function(self, t)
-        self:each(function(w)
-            w:notify(t)
-        end)
-    end,
-
-    synchronize = function(self)
-        self:each(function(w) w:synchronize() end)
-    end,
-
-    update = function(self)
-        self:each(function(w)
-            forEachCell(w, function(cell)
-                local p = table.fill(#w.species, 0)
-                forEachNeighbor(cell, function(cell, neighbor, weight)
-                    local this, that = cell.species, neighbor.past.species
-                    p[that] = p[that] + (1/4) * w.pmatrix[that][this]
-                end)
-                p = table.shuffle(p, "species", "p")
-                for i = 1, #p do
-                    if math.random() < p[i].p then
-                        cell.species = p[i].species
-                        break
-                    end
+    printWorlds = function(self, time)
+        local width = 2 * self.xdim * #self + 3 * #self - 4
+        local time = time .. " "
+        io.write(time .. string.rep("-", width - string.len(time)) .."\n")
+        for y = 1, self.ydim do
+            for m = 1, #self do
+                for x = 1, self.xdim do
+                    local cell = self[m].cells[self.ydim * (x - 1) + y]
+                    io.write(SYMBOLS[cell.species])
+                    if x ~= self.xdim then io.write(" ") end
                 end
-            end)
-        end)
-    end,
-
-    openFiles = function(self)
-        self:each(function(w) w.file = io.open(w.filename, "w") end)
-    end,
-
-    closeFiles = function(self)
-        self:each(function(w) w.file:close() end)
-    end,
-
-    printWorlds = function(self, time, last)
-        if self.print then
-            if (type(self.print) ~= "number" or (last or time % self.print == 0)) then
-                local width = 2 * self.xdim * #self + 3 * #self - 4
-                local time = time .. " "
-                io.write(time .. string.rep("-", width - string.len(time)) .."\n")
-                for y = 1, self.ydim do
-                    for m = 1, #self do
-                        for x = 1, self.xdim do
-                            local cell = self[m].cells[self.ydim * (x - 1) + y]
-                            io.write(symbols[cell.species])
-                            if x ~= self.xdim then io.write(" ") end
-                        end
-                        if m ~= #self then io.write(string.rep(" ", 4)) end
-                    end
-                    if y ~= self.ydim then io.write("\n") end
-                end
-                io.write("\n")
-                local S = #self.species
-                for i, s in pairs(self.species) do
-                    io.write(s .. " (" .. symbols[i] .. ")")
-                    if i == S then
-                        io.write("\n")
-                    else
-                        io.write(" ")
-                    end
-                end
-                io.write(string.rep("-", width) .."\n\n")
+                if m ~= #self then io.write(string.rep(" ", 4)) end
             end
+            if y ~= self.ydim then io.write("\n") end
         end
-    end,
-
-    printImages = function(self, time, last)
-        if self.image then
-            if (type(self.image) ~= "number" or (last or time % self.image == 0)) then
-                self:each(function(w)
-                    local image = gd.createTrueColor(w.xdim * self.imageCellSize,
-                                                     w.ydim * self.imageCellSize)
-                    local c = {}
-                    for i = 1, #self.species do
-                        c[i] = image:colorResolve(colors[i][1],
-                                                  colors[i][2],
-                                                  colors[i][3])
-                    end
-                    forEachCell(w, function(cell)
-                        image:filledRectangle(
-                            cell.x * self.imageCellSize,
-                            (cell.y + 1) * self.imageCellSize - 1,
-                            (cell.x + 1) * self.imageCellSize - 1,
-                            cell.y * self.imageCellSize,
-                            c[cell.species])
-                    end)
-                    if self.imageType == "gif" then
-                        image:gif(w.imgprefix .. time .. ".gif")
-                    elseif self.imageType == "png" then
-                        image:png(w.imgprefix .. time .. ".png")
-                    elseif self.imageType == "jpeg" then
-                        image:jpeg(w.imgprefix .. time .. ".jpg", 80)
-                    end
-                end)
-            end
+        io.write("\n")
+        local S = #self.species
+        for i, s in pairs(self.species) do
+            io.write(s .. " (" .. SYMBOLS[i] .. ")")
+            if i == S then io.write("\n") else io.write(" ") end
         end
+        io.write(string.rep("-", width) .."\n\n")
     end,
 
     mergeFiles = function(self)
@@ -152,66 +66,63 @@ local Worlds_ = {
         end)
     end,
 
-    writeHeader = function(self)
-        self:each(function(w)
-            w.file:write(tabs("Time", w.species) .. "\n")
-        end)
-    end,
-
-    writeHistogram = function(self, time)
-        self:each(function(w)
-            local hist = table.fill(#self.species, 0)
-            forEachCell(w, function(cell)
-                hist[cell.species] = hist[cell.species] + 1
-            end)
-            w.file:write(tabs(time, hist) .. "\n")
-        end)
-    end,
-
     init = function(self, executions, init)
-        rmdir("out")
-        mkdir("out")
-        mkdir("out/images")
-        mkdir("out/csv")
+        rmdir(self.out)
+        mkdir(self.out)
+        mkdir(self.out .. "/images")
+        mkdir(self.out .. "/csv")
         for i, fun in ipairs(init) do
-			mkdir("out/images/model" .. i)
+			mkdir(self.out .. "/images/model" .. i)
             for j = 1, executions do
-				mkdir("out/images/model" .. i .. "/run" .. j)
-                local world = CellularSpace{
+                local imgdir = self.out .. "/images/model" .. i .. "/run" .. j
+				mkdir(imgdir)
+                table.insert(self, World({
+                    init = fun,
                     xdim = self.xdim,
                     ydim = self.ydim,
                     pmatrix = self.pmatrix,
                     species = self.species,
-                    filename = "out/csv/model-".. i .. "-" .. j .. ".csv",
-                    imgprefix = "out/images/model".. i .. "/run" .. j .. "/"
-                }
-                forEachCell(world, function(cell, ...)
-                    cell.species = fun(world, cell, ...)
-                end)
-                world:createNeighborhood({
-                    strategy = "vonneumann",
-                    self = false
-                })
-                table.insert(self, world)
+                    filename = self.out .. "/csv/model-".. i .. "-" .. j .. ".csv",
+                    imgprefix = imgdir .. "/",
+                    imageType = self.imageType,
+                    imageCellSize = self.imageCellSize
+                }))
             end
         end
     end,
 
+    observe = function(self, time, iterations)
+        self:each(function(w)
+            w:writeHistogram(time)
+        end)
+        if self.image and (time == iterations or time % self.image == 0) then
+            self:each(function(w)
+                w:printImage(time)
+            end)
+        end
+        if self.print and (time == iterations or time % self.print == 0) then
+            self:printWorlds(time)
+        end
+    end,
+
     run = function(self, iterations)
-        self:openFiles()
-        self:writeHeader()
-        Timer{
+        self:each(function(w)
+            w:openFile()
+            w:writeHeader()
+        end)
+        Timer({
             Event{time = 0, action = function(e)
-                self:writeHistogram(e:getTime())
-                self:printWorlds(e:getTime(), e:getTime() == iterations)
-                self:printImages(e:getTime(), e:getTime() == iterations)
+                self:observe(e:getTime(), iterations)
             end},
             Event{action = function(e)
-                self:synchronize()
-                self:update()
+                self:each(function(w)
+                    w:synchronize()
+                    w:update()
+                end)
             end}
-        }:execute(iterations)
-        self:closeFiles()
+        }):execute(iterations)
+
+        self:each(function(w) w:closeFile() end)
         self:mergeFiles()
     end
 }
@@ -230,7 +141,10 @@ function Worlds(attr)
     for _,v in ipairs(attr.pmatrix) do
         assert(#attr.species == #v)
     end
+    if attr.image == true then attr.image = 1 end
+    if attr.print == true then attr.print = 1 end
     local worlds = {
+        out = attr.out or "out",
         xdim = attr.xdim or 40,
         ydim = attr.ydim or 40,
         species = attr.species,
