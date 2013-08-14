@@ -11,7 +11,8 @@
 \usepackage[utf8]{inputenc}
 \usepackage[a4paper,left=3cm,right=3cm,top=3cm,bottom=3cm]{geometry}
 \usepackage[margin=10pt,labelfont={bf},format=plain]{caption}
-\usepackage{subcaption}
+\usepackage[labelformat=parens,labelsep=colon]{subcaption}
+\DeclareCaptionSubType*[arabic]{figure}
 \usepackage{epstopdf}
 \usepackage[hyphens]{url}
 \PassOptionsToPackage{hyphens}{url}
@@ -87,7 +88,7 @@
         \centering\includeframe{4}{1}{#1}
     \end{subfigure}}
 
-\newcommand{\legend}{\usebox{\lolium}~Lolium, \usebox{\agrostis}~Agrostis, \usebox{\holcus}~Holcus, \usebox{\poa}~Poa, \usebox{\cynosurus}~Cynosurus}
+\newcommand{\legend}{\usebox{\lolium}~Lolium, \usebox{\agrostis}~Agrostis, \usebox{\holcus}~Holcus, \usebox{\poa}~Poa and \usebox{\cynosurus}~Cynosurus}
 
 
 \newcommand{\includegraph}[1]{
@@ -114,24 +115,70 @@
                 \addplot[smooth,cynosurus,line width=1pt] table[x={Time}, y expr=\thisrow{Cynosurus}/16]{\model};
             \end{axis}
         \end{tikzpicture}
-        \caption{Model #1}
+        \caption{\label{fig:graph:#1}}
     \end{subfigure}}
 
 \begin{document}
 \maketitle
 \onehalfspacing
 
+The model presented by Jonathon Silverton, Senino Holtier, Jeff Johnson and Pam Dale evaluates different spatial distributions of competing species and their influence on their invasion dynamics using a cellular automaton.
+
+For this five different grass species (\emph{Agrostis stolonifera}, \emph{Holcus lanatus}, \emph{Cynosurus cristatus}, \emph{Poa trivialis} and \emph{Lolium perenn}) were examined by aligning them in specific spatial patterns in a 40x40 cellular space. At each time step a cell is tried do be invaded by their neighbors containing a competing species.
+
+The probability of a cell being invaded by another species is calculate the the weighted sum of neighboring species invasion rates in a Von Neumann neighborhood. The invasion rate of a species is specific to another species and is deduced by field experiments.
+
+There a four models of initial alignment that were executed five times to reduce reduce the effects of the probabilistic nature of the model.
+
+\begin{enumerate}
+    \item All species are distributed randomly over space (see Figure \ref{fig:start:1}).
+    \item Aligning the species in bands with the most invasive species on first, followed by species ranked so the are least invasive from the previous (\emph{Agrostis}, \emph{Holcus}, \emph{Lolium}, \emph{Cynosurus}, \emph{Poa}, see Figure \ref{fig:start:2}).
+    \item Aligning the species in bands with the most invasive species on first, followed by species ranked so they are least able to invade the previous (\emph{Agrostis}, \emph{Lolium}, \emph{Cynosurus}, \emph{Holcus}, \emph{Poa}, see Figure \ref{fig:start:3}).
+    \item Aligning the species in bands ranked by general invasiveness minus general invasibility (\emph{Agrostis}, \emph{Holcus}, \emph{Poa}, \emph{Cynosurus}, \emph{Lolium}, see Figure \ref{fig:start:4}).
+\end{enumerate}
+
 \begin{figure}
     \centering
-    \includeframeset{0}
-    \includeframeset{100}
-    \includeframeset{200}
-    \includeframeset{300}
-    \includeframeset{400}
-    \includeframeset{500}
-    \includeframeset{600}
-    \caption{\legend}
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering
+        \caption{\label{fig:start:1}}
+        \includeframe{1}{1}{0}
+    \end{subfigure}\hspace{3pt}%
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering
+        \caption{\label{fig:start:2}}
+        \includeframe{2}{1}{0}
+    \end{subfigure}\hspace{3pt}%
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering
+        \caption{\label{fig:start:3}}
+        \includeframe{3}{1}{0}
+    \end{subfigure}\hspace{3pt}%
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering
+        \caption{\label{fig:start:4}}
+        \includeframe{4}{1}{0}
+    \end{subfigure}
+    \caption{\label{fig:start} Initial spatial distribution in the four models (\legend).}
 \end{figure}
+
+
+The results presented by Silverton et al. could be easily reproduced using the detailed description of the used method. The single uncertain point in the simulation regards in which order the neighboring cells try to invade a cell. The presented model only states the probabilities for a species being invaded by another one but not how the concrete invasion process takes place.
+
+Given the example of a cell surrounded by to distinct species. The model allows us to assign probabilities to the surrounding species but is not clear about which of the following applies:
+
+\begin{enumerate}
+    \item All species try to invade the cell. The species are randomly ordered and the process ends with the first successful attempt or if there are no more species.
+    \item All species try to invade the cell. The species are ordered by their probabilities and the process ends with the first successful attempt or if there are no more species.
+    \item All species try to invade the cell. The species are randomly ordered and the process ends with the if there are no more species.
+    \item All species try to invade the cell. The species are ordered by their probabilities and the process ends if there are no more species.
+    \item Only the most promising species attempts to invade the cell.
+    \item Only a single randomly chosen species tries to invade the cell.
+\end{enumerate}
+
+For this simulation the first method was chosen as it offers the chance of a species with a lower invasion rate to invade the cell.
+
+Despite this uncertainty the results (see Figures \ref{fig:spatial} and \ref{fig:freq}) were nearly identical to the shown figures of Silverton et al. A absolute identical reproduction although is impossible due to the probabilistic nature of the model.
 
 \begin{figure}
     \centering
@@ -139,8 +186,34 @@
     \includegraph{2}
     \includegraph{3}
     \includegraph{4}
-    \caption{\legend}
+    \caption{\label{fig:freq}Frequencies of \legend{} over time.}
 \end{figure}
 
+\emph{Lolium}, \emph{Poa} and \emph{Cynosurus} are superseded by \emph{Agrostis} and \emph{Holcus} in all four models. The models differentiate by the speed of extinction of the recessive species and the proportion of \emph{Agrostis} and \emph{Holcus}. In the random configuration the recessive species are extruded almost instantly and \emph{Agrostis} dominates \emph{Holcus} massively due to the shattered distribution of \emph{Holcus} and it's slightly greater invasibility (see Figures \ref{fig:spatial:1} and \ref{fig:graph:1}). In model one to three the recessive species survive considerably longer (in model two \emph{Lolium} even survives till the aggressive \emph{Agrostis} and \emph{Poa} till end of the simulation in a small configuration protected by \emph{Holcus}, see Figure \ref{fig:spatial:2}). The order of bands influences the extinction rate of the recessive species and the ratio of \emph{Agrostis} and \emph{Holcus}. \emph{Agrostis} dominates every other species except \emph{Holcus} which in turn is quite passive. This factor results in a more diverse configuration the second and fourth model as \emph{Holcus} blocks \emph{Agrostis} from invading \emph{Lolium}, \emph{Poa} and \emph{Cynosurus} (see Figures \ref{fig:spatial:2} and \ref{fig:spatial:4}). Over time this is relativized by the fact that at some point \emph{Agrostis} breaks through \emph{Holcus} and invades the large grown \emph{Poa} (see Figures \ref{fig:spatial:2} and \ref{fig:graph:2}) or \emph{Holcus} retains enough strength to block \emph{Agrostis} and invades \emph{Poa} (see Figures \ref{fig:spatial:4} and \ref{fig:graph:4}). The configurations result in a different ratio of \emph{Agrostis} and \emph{Holcus} at the end of the simulation. Model 2 shows a different configuration where \emph{Lolium} and \emph{Cynosurus} are superseded by \emph{Agrostis} and \emph{Poa} is outnumbered by \emph{Holcus}, which results in a more even proportion of the dominant species (see Figures \ref{fig:spatial:3} and \ref{fig:graph:3}). Once only \emph{Agrostis} and \emph{Holcus} are the only remaining species changes changes are very slow as their invading rate has a very small difference. Although \emph{Agrostis} will eventually outnumber \emph{Holcus} at some point.
+
+As the simulation shows spatial distribution of species is an important factor for the diversity of a competing society. The population size is highly dependent of the neighboring species and their specific invasion rates. By choosing a different spatial configuration the extinction of passive or recessive species can be server delayed.
+
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering\caption{\label{fig:spatial:1}}
+    \end{subfigure}\hspace{3pt}%
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering\caption{\label{fig:spatial:2}}
+    \end{subfigure}\hspace{3pt}%
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering\caption{\label{fig:spatial:3}}
+    \end{subfigure}\hspace{3pt}%
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering\caption{\label{fig:spatial:4}}
+    \end{subfigure}
+    \includeframeset{100}
+    \includeframeset{200}
+    \includeframeset{300}
+    \includeframeset{400}
+    \includeframeset{500}
+    \includeframeset{600}
+    \caption{\label{fig:spatial}\legend{} at the 100th, 200th, 300th, 400th, 500th and 600th time step of the four different models.}
+\end{figure}
 
 \end{document}
